@@ -11,6 +11,8 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
+use function Illuminate\Filesystem\join_paths;
+
 class ProcessFileJob implements ShouldQueue
 {
     use Dispatchable, Queueable, SerializesModels, InteractsWithQueue;
@@ -77,11 +79,11 @@ class ProcessFileJob implements ShouldQueue
     private function processKindleFriendly(string $filePath): string
     {
         $outputName = $this->processedFile->output_name ?? pathinfo($filePath, PATHINFO_FILENAME) . '_kindle';
-        $outputDir = dirname($filePath);
+        $outputDir = join_paths(base_path(), 'storage', 'app', 'public', 'outputs');
         $outputPath = $outputDir . DIRECTORY_SEPARATOR . $outputName;
 
         // Build command with k2pdfopt arguments
-        $command = [base_path() . '/lib/k2pdfopt', '-nt 8'];
+        $command = [join_paths(base_path(), 'lib', 'k2pdfopt'), '-nt 8'];
 
         // Add optional parameters
         if ($this->processedFile->width) {

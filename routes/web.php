@@ -12,3 +12,4 @@ Route::get('/', function () {
 Route::post('/upload', [UploadController::class, 'store'])->name('upload');
 Route::post('/process', [ProcessController::class, 'store'])->name('process');
 Route::get('/processed-files', [ProcessController::class, 'index'])->name('processed-files');
+Route::get('/download/{id}', [ProcessController::class, 'download'])->name('processed-files.download');

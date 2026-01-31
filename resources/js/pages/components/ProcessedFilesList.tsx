@@ -4,7 +4,8 @@ interface ProcessedFile {
     id: string;
     filename: string;
     dateCreated: string;
-    status: 'complete' | 'error';
+    status: 'complete' | 'error' | 'in-progress';
+    downloadUrl?: string;
 }
 
 interface ProcessedFilesListProps {
@@ -25,18 +26,22 @@ const getFileIcon = (filename: string): string => {
     }
 };
 
-const getStatusColor = (status: 'complete' | 'error'): string => {
-    return status === 'complete' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+const getStatusColor = (status: 'complete' | 'error' | 'in-progress'): string => {
+    if (status === 'complete') return 'bg-green-100 text-green-800';
+    if (status === 'error') return 'bg-red-100 text-red-800';
+    return 'bg-yellow-100 text-yellow-800';
 };
 
-const getStatusText = (status: 'complete' | 'error'): string => {
-    return status === 'complete' ? '✓ Complete' : '✗ Error';
+const getStatusText = (status: 'complete' | 'error' | 'in-progress'): string => {
+    if (status === 'complete') return '✓ Complete';
+    if (status === 'error') return '✗ Error';
+    return '… In Progress';
 };
 
 export default function ProcessedFilesList({ files }: ProcessedFilesListProps) {
     const [currentPage, setCurrentPage] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'all' | 'complete' | 'error'>('all');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'complete' | 'error' | 'in-progress'>('all');
 
     // Filter files based on search and status
     const filteredFiles = useMemo(() => {
@@ -80,10 +85,11 @@ export default function ProcessedFilesList({ files }: ProcessedFilesListProps) {
                 />
                 <select
                     value={statusFilter}
-                    onChange={(e) => handleStatusFilterChange(e.target.value as 'all' | 'complete' | 'error')}
+                    onChange={(e) => handleStatusFilterChange(e.target.value as 'all' | 'complete' | 'error' | 'in-progress')}
                     className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-slate-500 focus:outline-none"
                 >
                     <option value="all">All Status</option>
+                    <option value="in-progress">In Progress</option>
                     <option value="complete">Complete</option>
                     <option value="error">Error</option>
                 </select>
@@ -121,6 +127,18 @@ export default function ProcessedFilesList({ files }: ProcessedFilesListProps) {
                                             >
                                                 {getStatusText(file.status)}
                                             </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            {file.downloadUrl ? (
+                                                <a
+                                                    href={file.downloadUrl}
+                                                    className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                                >
+                                                    Download
+                                                </a>
+                                            ) : (
+                                                <span className="text-sm text-slate-500">N/A</span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

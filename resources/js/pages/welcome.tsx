@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState, FormEvent, ChangeEvent, useRef, useEffect } from 'react';
 import ProcessedFilesList from './components/ProcessedFilesList';
 
@@ -11,6 +11,18 @@ export default function Welcome() {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Dialog for flash messages
+    const { flash } = usePage().props as any;
+    const [dialogVisible, setDialogVisible] = useState(false);
+    const [dialogMessage, setDialogMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (flash?.success || flash?.error) {
+            setDialogMessage(flash.success ?? flash.error);
+            setDialogVisible(true);
+        }
+    }, [flash]);
 
     // Fetch processed files from the API
     const [processedFiles, setProcessedFiles] = useState([]);
@@ -325,6 +337,21 @@ export default function Welcome() {
                             {isProcessing ? 'Processing...' : 'Process File'}
                         </button>
                     </form>
+
+                    {/* Flash dialog */}
+                    {dialogVisible && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center">
+                            <div className="fixed inset-0 bg-black opacity-50" onClick={() => setDialogVisible(false)} />
+                            <div className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+                                <h3 className="text-lg font-medium text-slate-900">{dialogMessage}</h3>
+                                <div className="mt-4 flex justify-end">
+                                    <button onClick={() => setDialogVisible(false)} className="rounded bg-slate-900 px-3 py-1 text-white">
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <ProcessedFilesList files={processedFiles} />
                 </div>

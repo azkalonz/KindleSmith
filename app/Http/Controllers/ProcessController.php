@@ -56,16 +56,13 @@ class ProcessController extends Controller
             // Dispatch the processing job
             ProcessFileJob::dispatch($processedFile);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'File processing started',
-                'processed_file_id' => $processedFile->id,
-            ]);
+            // Redirect back to the welcome page and flash a message
+            return redirect()->route('home')
+                ->with('success', 'File processing started')
+                ->with('processed_file_id', $processedFile->id);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Processing failed: ' . $e->getMessage(),
-            ], 400);
+            // Redirect back with error message
+            return redirect()->back()->with('error', 'Processing failed: ' . $e->getMessage());
         }
     }
 
@@ -85,6 +82,7 @@ class ProcessController extends Controller
                     'filename' => $filename,
                     'dateCreated' => $file->created_at->toIso8601String(),
                     'status' => strtolower($file->status === 'Complete' ? 'complete' : ($file->status === 'Error' ? 'error' : 'in-progress')),
+                    'downloadUrl' => route('processed-files.download', ['id' => $file->id]),
                 ];
             });
 
@@ -92,5 +90,20 @@ class ProcessController extends Controller
             'success' => true,
             'data' => $processedFiles,
         ]);
+    }
+
+    /**
+     * Download a processed file (output if available, otherwise the original input)
+     */
+    public function download($id)
+    {
+        $file = ProcessedFile::findOrFail($id);
+
+        $path = storage_path('app/' . $file['output_file_path']);
+        if (!file_exists($path)) {
+            abort(404, 'File not found');
+        }
+
+        return response()->download($path);
     }
 }
