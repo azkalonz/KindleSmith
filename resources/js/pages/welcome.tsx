@@ -188,7 +188,7 @@ export default function Welcome() {
             <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
                 <div className="w-full max-w-4xl space-y-8">
                     <div className="space-y-2 text-center">
-                        <h1 className="text-4xl font-bold text-slate-900">PDF/EPUB Processor</h1>
+                        <h1 className="text-4xl font-bold text-slate-900">KindleSmith: PDF/EPUB EDITOR</h1>
                         <p className="text-slate-600">Upload and transform your documents</p>
                     </div>
 
