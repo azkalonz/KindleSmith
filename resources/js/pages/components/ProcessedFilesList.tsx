@@ -6,6 +6,7 @@ interface ProcessedFile {
     dateCreated: string;
     status: 'complete' | 'error' | 'in-progress';
     downloadUrl?: string;
+    outputname: string;
 }
 
 interface ProcessedFilesListProps {
@@ -117,7 +118,7 @@ export default function ProcessedFilesList({ files }: ProcessedFilesListProps) {
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-xl">{getFileIcon(file.filename)}</span>
-                                                <span className="font-medium text-slate-900">{file.filename}</span>
+                                                <span className="font-medium text-slate-900">{file.outputname}</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-slate-600">{new Date(file.dateCreated).toLocaleString()}</td>

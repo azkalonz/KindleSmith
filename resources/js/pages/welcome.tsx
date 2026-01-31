@@ -18,8 +18,8 @@ export default function Welcome() {
     const [dialogMessage, setDialogMessage] = useState<string | null>(null);
 
     useEffect(() => {
-        if (flash?.success || flash?.error) {
-            setDialogMessage(flash.success ?? flash.error);
+        if (flash && flash.message) {
+            setDialogMessage(flash.message);
             setDialogVisible(true);
         }
     }, [flash]);
@@ -157,11 +157,20 @@ export default function Welcome() {
         }
 
         try {
-            router.post('/process', data);
-            // Refresh processed files after submission
-            setTimeout(() => {
-                fetchProcessedFiles();
-            }, 1000);
+            // Clear local file selection and reset input immediately
+            setFile(null);
+            setUploadedFilePath(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+
+            router.post('/process', data, {
+                onSuccess: () => {
+                    // attempt to refresh list (server redirect will also provide flash)
+                    fetchProcessedFiles();
+                },
+                onError: () => {
+                    // leave dialog to flash/error handling
+                },
+            });
         } catch (error) {
             console.error('Error processing file:', error);
             alert('Error processing file');
@@ -331,12 +340,21 @@ export default function Welcome() {
 
                         <button
                             type="submit"
-                            disabled={isProcessing}
+                            disabled={isProcessing || !uploadedFilePath}
                             className="w-full rounded-lg bg-slate-900 px-4 py-2 font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {isProcessing ? 'Processing...' : 'Process File'}
                         </button>
                     </form>
+
+                    {/* Inline flash message box (also shown in dialog) */}
+                    {dialogMessage && (
+                        <div className="mt-4 w-full max-w-4xl">
+                            <div className={`rounded-lg p-3 ${flash?.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                                {dialogMessage}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Flash dialog */}
                     {dialogVisible && (

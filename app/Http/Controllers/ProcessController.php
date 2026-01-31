@@ -58,11 +58,17 @@ class ProcessController extends Controller
 
             // Redirect back to the welcome page and flash a message
             return redirect()->route('home')
-                ->with('success', 'File processing started')
+                ->with('flash', [
+                    'success' => true,
+                    'message' => 'File processing started'
+                ])
                 ->with('processed_file_id', $processedFile->id);
         } catch (\Exception $e) {
             // Redirect back with error message
-            return redirect()->back()->with('error', 'Processing failed: ' . $e->getMessage());
+            return redirect()->back()->with('flash', [
+                'success' => false,
+                'message' => 'Failed to start file processing: ' . $e->getMessage(),
+            ]);
         }
     }
 
@@ -80,6 +86,7 @@ class ProcessController extends Controller
                 return [
                     'id' => (string) $file->id,
                     'filename' => $filename,
+                    'outputname' => $file->output_name,
                     'dateCreated' => $file->created_at->toIso8601String(),
                     'status' => strtolower($file->status === 'Complete' ? 'complete' : ($file->status === 'Error' ? 'error' : 'in-progress')),
                     'downloadUrl' => route('processed-files.download', ['id' => $file->id]),

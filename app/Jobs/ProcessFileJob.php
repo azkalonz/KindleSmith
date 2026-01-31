@@ -17,6 +17,7 @@ class ProcessFileJob implements ShouldQueue
 {
     use Dispatchable, Queueable, SerializesModels, InteractsWithQueue;
 
+    public $timeout = 900;
     protected ProcessedFile $processedFile;
 
     /**
@@ -120,6 +121,11 @@ class ProcessFileJob implements ShouldQueue
         $process->run();
 
         if (!$process->isSuccessful()) {
+            Log::info('FAIL:::' . $process->getErrorOutput());
+            $this->processedFile->update([
+                'status' => 'Error',
+                'error_message' => $process->getErrorOutput(),
+            ]);
             throw new \Exception('k2pdfopt processing failed: ' . $process->getErrorOutput());
         }
 
