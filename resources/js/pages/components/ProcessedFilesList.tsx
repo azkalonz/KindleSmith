@@ -7,6 +7,7 @@ interface ProcessedFile {
     status: 'complete' | 'error' | 'in-progress';
     downloadUrl?: string;
     outputname: string;
+    errorMessage: string;
 }
 
 interface ProcessedFilesListProps {

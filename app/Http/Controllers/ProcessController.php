@@ -89,6 +89,7 @@ class ProcessController extends Controller
                     'outputname' => $file->output_name,
                     'dateCreated' => $file->created_at->toIso8601String(),
                     'status' => strtolower($file->status === 'Complete' ? 'complete' : ($file->status === 'Error' ? 'error' : 'in-progress')),
+                    'errorMessage' => $file->error_message,
                     'downloadUrl' => route('processed-files.download', ['id' => $file->id]),
                 ];
             });

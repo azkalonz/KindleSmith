@@ -117,7 +117,7 @@ class ProcessFileJob implements ShouldQueue
         $command[] = $filePath;
 
         $process = new Process($command);
-
+        $process->setTimeout($this->timeout);
         $process->run();
 
         if (!$process->isSuccessful()) {
@@ -144,6 +144,7 @@ class ProcessFileJob implements ShouldQueue
 
         $process = new Process($command);
 
+        $process->setTimeout($this->timeout);
         $process->run();
 
         if (!$process->isSuccessful()) {
