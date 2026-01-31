@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ProcessedFile;
+use App\Jobs\ProcessFileJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\Process\Process;
 
 class ProcessController extends Controller
 {
@@ -15,35 +16,50 @@ class ProcessController extends Controller
     {
         $request->validate([
             'file_path' => 'required|string',
-            'kindle_friendly' => 'nullable|boolean',
-            'remove_hyphens' => 'nullable|boolean',
+            'kindle_friendly' => 'nullable|in:true,false',
+            'remove_hyphens' => 'nullable|in:true,false',
+            'width' => 'nullable|integer',
+            'height' => 'nullable|integer',
+            'preview_page' => 'nullable|integer',
+            'output_name' => 'nullable|string',
+            'margin' => 'nullable|numeric',
+            'max_columns' => 'nullable|integer',
+            'font_size' => 'nullable|integer',
         ]);
 
         try {
             $filePath = $request->input('file_path');
 
             // Check if file exists
-            if (!file_exists($filePath)) {
+            if (!Storage::disk('local')->exists($filePath)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'File not found at the specified path',
+                    'message' => 'File not found at the specified path'
                 ], 404);
             }
 
-            // Process with k2pdfopt if kindle_friendly is true
-            if ($request->boolean('kindle_friendly')) {
-                $this->processKindleFriendly($filePath, $request);
-            }
+            // Create a processed file record
+            $processedFile = ProcessedFile::create([
+                'input_file_path' => $filePath,
+                'kindle_friendly' => $request->boolean('kindle_friendly'),
+                'remove_hyphens' => $request->boolean('remove_hyphens'),
+                'width' => $request->input('width'),
+                'height' => $request->input('height'),
+                'preview_page' => $request->input('preview_page'),
+                'output_name' => $request->input('output_name'),
+                'margin' => $request->input('margin'),
+                'max_columns' => $request->input('max_columns'),
+                'font_size' => $request->input('font_size'),
+                'status' => 'In Progress',
+            ]);
 
-            // Process with ebook-modify if remove_hyphens is true
-            if ($request->boolean('remove_hyphens')) {
-                $this->removeHyphens($filePath);
-            }
+            // Dispatch the processing job
+            ProcessFileJob::dispatch($processedFile);
 
             return response()->json([
                 'success' => true,
-                'message' => 'File processed successfully',
-                'file_path' => $filePath,
+                'message' => 'File processing started',
+                'processed_file_id' => $processedFile->id,
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -54,68 +70,27 @@ class ProcessController extends Controller
     }
 
     /**
-     * Process file with k2pdfopt for Kindle-friendly view
+     * Get processed files
      */
-    private function processKindleFriendly($filePath, Request $request)
+    public function index()
     {
-        $outputName = $request->input('output_name') ?? pathinfo($filePath, PATHINFO_FILENAME) . '_kindle';
+        $processedFiles = ProcessedFile::latest('created_at')
+            ->get()
+            ->map(function ($file) {
+                // Extract filename from path
+                $filename = pathinfo($file->output_file_path ?? $file->input_file_path, PATHINFO_BASENAME);
 
-        // Build command with k2pdfopt arguments
-        $command = ['k2pdfopt.exe'];
+                return [
+                    'id' => (string) $file->id,
+                    'filename' => $filename,
+                    'dateCreated' => $file->created_at->toIso8601String(),
+                    'status' => strtolower($file->status === 'Complete' ? 'complete' : ($file->status === 'Error' ? 'error' : 'in-progress')),
+                ];
+            });
 
-        // Add optional parameters
-        if ($request->input('width')) {
-            $command[] = '-dev_' . $request->input('width');
-        }
-
-        if ($request->input('preview_page')) {
-            $command[] = '-p';
-            $command[] = $request->input('preview_page');
-        }
-
-        if ($request->input('margin')) {
-            $command[] = '-m';
-            $command[] = $request->input('margin');
-        }
-
-        if ($request->input('max_columns')) {
-            $command[] = '-col';
-            $command[] = $request->input('max_columns');
-        }
-
-        if ($request->input('font_size')) {
-            $command[] = '-fs';
-            $command[] = $request->input('font_size');
-        }
-
-        // Add output and input paths
-        $command[] = '-o';
-        $command[] = $outputName;
-        $command[] = $filePath;
-
-        $process = new Process($command);
-        $process->run();
-
-        if (!$process->isSuccessful()) {
-            throw new \Exception('k2pdfopt processing failed: ' . $process->getErrorOutput());
-        }
-    }
-
-    /**
-     * Remove hyphens using ebook-modify
-     */
-    private function removeHyphens($filePath)
-    {
-        $command = [
-            'ebook-modify.exe',
-            $filePath,
-        ];
-
-        $process = new Process($command);
-        $process->run();
-
-        if (!$process->isSuccessful()) {
-            throw new \Exception('ebook-modify processing failed: ' . $process->getErrorOutput());
-        }
+        return response()->json([
+            'success' => true,
+            'data' => $processedFiles,
+        ]);
     }
 }

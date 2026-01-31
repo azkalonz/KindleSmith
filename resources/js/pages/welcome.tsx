@@ -1,5 +1,6 @@
 import { Head, router } from '@inertiajs/react';
-import { useState, FormEvent, ChangeEvent, useRef } from 'react';
+import { useState, FormEvent, ChangeEvent, useRef, useEffect } from 'react';
+import ProcessedFilesList from './components/ProcessedFilesList';
 
 export default function Welcome() {
     const [kindleOptions, setKindleOptions] = useState(false);
@@ -11,14 +12,39 @@ export default function Welcome() {
     const [isProcessing, setIsProcessing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Fetch processed files from the API
+    const [processedFiles, setProcessedFiles] = useState([]);
+    const [loadingFiles, setLoadingFiles] = useState(true);
+
+    useEffect(() => {
+        fetchProcessedFiles();
+        // Poll for updates every 5 seconds
+        const interval = setInterval(fetchProcessedFiles, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const fetchProcessedFiles = async () => {
+        try {
+            const response = await fetch('/processed-files');
+            const result = await response.json();
+            if (result.success) {
+                setProcessedFiles(result.data);
+            }
+        } catch (error) {
+            console.error('Error fetching processed files:', error);
+        } finally {
+            setLoadingFiles(false);
+        }
+    };
+
     const [formData, setFormData] = useState({
-        width: '',
-        height: '',
+        width: '1072',
+        height: '1442',
         previewPage: '',
         outputName: '',
-        margin: '',
-        maxColumns: '',
-        fontSize: '',
+        margin: '0.2',
+        maxColumns: '1',
+        fontSize: '14',
     });
 
     const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -26,6 +52,10 @@ export default function Welcome() {
         if (files && files.length > 0) {
             const selectedFile = files[0];
             setFile(selectedFile);
+            setFormData((prev) => ({
+                ...prev,
+                outputName: selectedFile.name,
+            }));
             await uploadFile(selectedFile);
         }
     };
@@ -116,6 +146,10 @@ export default function Welcome() {
 
         try {
             router.post('/process', data);
+            // Refresh processed files after submission
+            setTimeout(() => {
+                fetchProcessedFiles();
+            }, 1000);
         } catch (error) {
             console.error('Error processing file:', error);
             alert('Error processing file');
@@ -131,7 +165,7 @@ export default function Welcome() {
                 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
             </Head>
             <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-                <div className="w-full max-w-md space-y-8">
+                <div className="w-full max-w-4xl space-y-8">
                     <div className="space-y-2 text-center">
                         <h1 className="text-4xl font-bold text-slate-900">PDF/EPUB Processor</h1>
                         <p className="text-slate-600">Upload and transform your documents</p>
@@ -291,6 +325,8 @@ export default function Welcome() {
                             {isProcessing ? 'Processing...' : 'Process File'}
                         </button>
                     </form>
+
+                    <ProcessedFilesList files={processedFiles} />
                 </div>
             </div>
         </>
