@@ -340,7 +340,7 @@ export default function Welcome() {
 
                         <button
                             type="submit"
-                            disabled={isProcessing || !uploadedFilePath}
+                            disabled={isProcessing || !uploadedFilePath || (!kindleOptions && !epubOptions)}
                             className="w-full rounded-lg bg-slate-900 px-4 py-2 font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {isProcessing ? 'Processing...' : 'Process File'}

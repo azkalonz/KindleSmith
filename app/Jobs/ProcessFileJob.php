@@ -3,12 +3,14 @@
 namespace App\Jobs;
 
 use App\Models\ProcessedFile;
+use Illuminate\Support\Str;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Process\Process;
 
 use function Illuminate\Filesystem\join_paths;
@@ -50,6 +52,7 @@ class ProcessFileJob implements ShouldQueue
 
             // Process with ebook-modify if remove_hyphens is true
             if ($this->processedFile->remove_hyphens) {
+                Log::info('ffff' . $filePath);
                 $this->removeHyphens($outputPath);
             }
 
@@ -82,6 +85,10 @@ class ProcessFileJob implements ShouldQueue
         $outputName = $this->processedFile->output_name ?? pathinfo($filePath, PATHINFO_FILENAME) . '_kindle';
         $outputDir = join_paths(base_path(), 'storage', 'app', 'public', 'outputs');
         $outputPath = $outputDir . DIRECTORY_SEPARATOR . $outputName;
+
+        if (Storage::disk('public')->exists('outputs/' . $outputName)) {
+            $outputPath = $outputDir . DIRECTORY_SEPARATOR . Str::uuid() . '_' . $outputName;
+        }
 
         // Build command with k2pdfopt arguments
         $command = [join_paths(base_path(), 'lib', 'k2pdfopt'), '-nt 8'];
@@ -129,6 +136,8 @@ class ProcessFileJob implements ShouldQueue
             throw new \Exception('k2pdfopt processing failed: ' . $process->getErrorOutput());
         }
 
+        Storage::disk('local')->delete($this->processedFile->input_file_path);
+
         return $outputPath;
     }
 
@@ -137,15 +146,24 @@ class ProcessFileJob implements ShouldQueue
      */
     private function removeHyphens(string $filePath): void
     {
+        $outputName = $this->processedFile->output_name ?? pathinfo($filePath, PATHINFO_FILENAME) . '_kindle';
+        $outputDir = join_paths(base_path(), 'storage', 'app', 'public', 'outputs');
+        $outputPath = $outputDir . DIRECTORY_SEPARATOR . $outputName;
+        $css = "body { hyphens: none; -webkit-hyphens: none; -moz-hyphens: none; }";
         $command = [
-            'ebook-modify',
+            'ebook-convert',
             $filePath,
+            $outputPath,
+            '--extra-css',
+            $css
         ];
 
+        Log::info($command);
         $process = new Process($command);
 
         $process->setTimeout($this->timeout);
         $process->run();
+
 
         if (!$process->isSuccessful()) {
             throw new \Exception('k2pdfopt processing failed: ' . $process->getErrorOutput());

@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\ProcessedFile;
 use App\Jobs\ProcessFileJob;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProcessController extends Controller
 {
@@ -46,7 +48,7 @@ class ProcessController extends Controller
                 'width' => $request->input('width'),
                 'height' => $request->input('height'),
                 'preview_page' => $request->input('preview_page'),
-                'output_name' => $request->input('output_name'),
+                'output_name' => $request->input('output_name') ?? array_reverse(explode("/", $filePath))[0],
                 'margin' => $request->input('margin'),
                 'max_columns' => $request->input('max_columns'),
                 'font_size' => $request->input('font_size'),
