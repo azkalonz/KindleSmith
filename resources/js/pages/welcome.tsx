@@ -1,10 +1,9 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { useState, FormEvent, ChangeEvent, useRef, useEffect } from 'react';
+import { useState, ChangeEvent, useRef, useEffect } from 'react';
 import ProcessedFilesList from './components/ProcessedFilesList';
 
 export default function Welcome() {
-    const [kindleOptions, setKindleOptions] = useState(false);
-    const [epubOptions, setEpubOptions] = useState(false);
+    const [selectedOption, setSelectedOption] = useState<'kindle' | 'epub' | null>(null);
     const [file, setFile] = useState<File | null>(null);
     const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -26,7 +25,6 @@ export default function Welcome() {
 
     // Fetch processed files from the API
     const [processedFiles, setProcessedFiles] = useState([]);
-    const [loadingFiles, setLoadingFiles] = useState(true);
 
     useEffect(() => {
         fetchProcessedFiles();
@@ -44,8 +42,6 @@ export default function Welcome() {
             }
         } catch (error) {
             console.error('Error fetching processed files:', error);
-        } finally {
-            setLoadingFiles(false);
         }
     };
 
@@ -122,13 +118,15 @@ export default function Welcome() {
 
     const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
+        let newValue = value;
+
         setFormData((prev) => ({
             ...prev,
-            [name]: value,
+            [name]: newValue,
         }));
     };
 
-    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         if (!uploadedFilePath) {
@@ -141,7 +139,7 @@ export default function Welcome() {
         const data = new FormData();
         data.append('file_path', uploadedFilePath);
 
-        if (kindleOptions) {
+        if (selectedOption === 'kindle') {
             if (formData.width) data.append('width', formData.width);
             if (formData.height) data.append('height', formData.height);
             if (formData.previewPage) data.append('preview_page', formData.previewPage);
@@ -152,8 +150,9 @@ export default function Welcome() {
             data.append('kindle_friendly', 'true');
         }
 
-        if (epubOptions) {
+        if (selectedOption === 'epub') {
             data.append('remove_hyphens', 'true');
+            if (formData.outputName) data.append('output_name', formData.outputName);
         }
 
         try {
@@ -185,7 +184,7 @@ export default function Welcome() {
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
             </Head>
-            <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+            <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-slate-50 to-slate-100 p-4">
                 <div className="w-full max-w-4xl space-y-8">
                     <div className="space-y-2 text-center">
                         <h1 className="text-4xl font-bold text-slate-900">KindleSmith: PDF/EPUB EDITOR</h1>
@@ -218,7 +217,7 @@ export default function Welcome() {
                                 <div className="mt-4 space-y-2">
                                     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
                                         <div
-                                            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300"
+                                            className="h-full bg-linear-to-r from-blue-500 to-blue-600 transition-all duration-300"
                                             style={{ width: `${uploadProgress}%` }}
                                         />
                                     </div>
@@ -234,113 +233,135 @@ export default function Welcome() {
 
                         {uploadedFilePath && (
                             <div className="space-y-3">
-                                <label className="flex cursor-pointer items-center space-x-3">
-                                    <input
-                                        type="checkbox"
-                                        className="h-4 w-4 rounded border-slate-300"
-                                        checked={kindleOptions}
-                                        onChange={(e) => setKindleOptions(e.target.checked)}
-                                    />
-                                    <span className="text-sm text-slate-700">Turn PDF into Kindle-friendly view</span>
-                                </label>
-                                {kindleOptions && (
-                                    <div className="ml-7 space-y-3 rounded-lg bg-slate-50 p-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700">Width</label>
-                                            <input
-                                                type="number"
-                                                name="width"
-                                                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                                                placeholder="Width in pixels"
-                                                value={formData.width}
-                                                onChange={handleInputChange}
-                                            />
+                                <fieldset>
+                                    <legend className="mb-3 text-sm font-medium text-slate-700">Choose an option:</legend>
+                                    <label className="flex cursor-pointer items-center space-x-3">
+                                        <input
+                                            type="radio"
+                                            name="processingOption"
+                                            value="kindle"
+                                            className="h-4 w-4 border-slate-300"
+                                            checked={selectedOption === 'kindle'}
+                                            onChange={(e) => setSelectedOption(e.target.checked ? 'kindle' : null)}
+                                        />
+                                        <span className="text-sm text-slate-700">Turn PDF into Kindle-friendly view</span>
+                                    </label>
+                                    {selectedOption === 'kindle' && (
+                                        <div className="ml-7 space-y-3 rounded-lg bg-slate-50 p-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700">Width</label>
+                                                <input
+                                                    type="number"
+                                                    name="width"
+                                                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                                    placeholder="Width in pixels"
+                                                    value={formData.width}
+                                                    onChange={handleInputChange}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700">Height</label>
+                                                <input
+                                                    type="number"
+                                                    name="height"
+                                                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                                    placeholder="Height in pixels"
+                                                    value={formData.height}
+                                                    onChange={handleInputChange}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700">Preview Page</label>
+                                                <input
+                                                    type="number"
+                                                    name="previewPage"
+                                                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                                    placeholder="Page number"
+                                                    value={formData.previewPage}
+                                                    onChange={handleInputChange}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700">Output Name</label>
+                                                <input
+                                                    type="text"
+                                                    name="outputName"
+                                                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                                    placeholder="Output filename"
+                                                    value={formData.outputName}
+                                                    onChange={handleInputChange}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700">Margin</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    name="margin"
+                                                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                                    placeholder="Margin value"
+                                                    value={formData.margin}
+                                                    onChange={handleInputChange}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700">Maximum Columns</label>
+                                                <input
+                                                    type="number"
+                                                    name="maxColumns"
+                                                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                                    placeholder="Number of columns"
+                                                    value={formData.maxColumns}
+                                                    onChange={handleInputChange}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700">Font Size</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    name="fontSize"
+                                                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                                    placeholder="Font size"
+                                                    value={formData.fontSize}
+                                                    onChange={handleInputChange}
+                                                />
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700">Height</label>
-                                            <input
-                                                type="number"
-                                                name="height"
-                                                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                                                placeholder="Height in pixels"
-                                                value={formData.height}
-                                                onChange={handleInputChange}
-                                            />
+                                    )}
+                                    <label className="flex cursor-pointer items-center space-x-3">
+                                        <input
+                                            type="radio"
+                                            name="processingOption"
+                                            value="epub"
+                                            className="h-4 w-4 border-slate-300"
+                                            checked={selectedOption === 'epub'}
+                                            onChange={(e) => setSelectedOption(e.target.checked ? 'epub' : null)}
+                                        />
+                                        <span className="text-sm text-slate-700">Remove hyphens for EPUB</span>
+                                    </label>
+                                    {selectedOption === 'epub' && (
+                                        <div className="ml-7 space-y-3 rounded-lg bg-slate-50 p-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700">Output Name</label>
+                                                <input
+                                                    type="text"
+                                                    name="outputName"
+                                                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                                    placeholder="Output filename (must end with .epub)"
+                                                    value={formData.outputName}
+                                                    onChange={handleInputChange}
+                                                />
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700">Preview Page</label>
-                                            <input
-                                                type="number"
-                                                name="previewPage"
-                                                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                                                placeholder="Page number"
-                                                value={formData.previewPage}
-                                                onChange={handleInputChange}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700">Output Name</label>
-                                            <input
-                                                type="text"
-                                                name="outputName"
-                                                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                                                placeholder="Output filename"
-                                                value={formData.outputName}
-                                                onChange={handleInputChange}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700">Margin</label>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                name="margin"
-                                                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                                                placeholder="Margin value"
-                                                value={formData.margin}
-                                                onChange={handleInputChange}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700">Maximum Columns</label>
-                                            <input
-                                                type="number"
-                                                name="maxColumns"
-                                                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                                                placeholder="Number of columns"
-                                                value={formData.maxColumns}
-                                                onChange={handleInputChange}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700">Font Size</label>
-                                            <input
-                                                type="number"
-                                                step="0.1"
-                                                name="fontSize"
-                                                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                                                placeholder="Font size"
-                                                value={formData.fontSize}
-                                                onChange={handleInputChange}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                                <label className="flex cursor-pointer items-center space-x-3">
-                                    <input
-                                        type="checkbox"
-                                        className="h-4 w-4 rounded border-slate-300"
-                                        checked={epubOptions}
-                                        onChange={(e) => setEpubOptions(e.target.checked)}
-                                    />
-                                    <span className="text-sm text-slate-700">Remove hyphens for EPUB</span>
-                                </label>
+                                    )}
+                                </fieldset>
                             </div>
                         )}
 
                         <button
                             type="submit"
-                            disabled={isProcessing || !uploadedFilePath || (!kindleOptions && !epubOptions)}
+                            disabled={isProcessing || !uploadedFilePath || !selectedOption}
                             className="w-full rounded-lg bg-slate-900 px-4 py-2 font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {isProcessing ? 'Processing...' : 'Process File'}
